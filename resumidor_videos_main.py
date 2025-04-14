@@ -8,8 +8,9 @@
 # pip install requests
 
 """
-so sai do looping do cather se o video for escoliho e dar certo em pegar o youtube
-ollama
+-- documentação
+so sai do looping do cather se o video for escolihdo e dar certo em pegar o youtube
+ollama necessario - ok
 resquests
 problemas
 versões
@@ -18,6 +19,9 @@ add prints para passo a apasso
 tempo de cada passo
 trancrevere demora muito dependo do model
 melhoarar o prompt ou fazer mais de um camada 
+verificar se ollama esta instlado e na porta certa, verificar se a ia escolhida existe na lista 
+tipos de prompt
+inico da interface
 """
 
 import whisper 
