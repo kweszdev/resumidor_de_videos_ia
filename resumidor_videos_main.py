@@ -8,22 +8,43 @@
 # pip install requests
 
 """
-so sai do looping do cather se o video for escoliho e dar certo em pegar o youtube
-ollama
-resquests
-problemas
-versões
-possivel converter e transcriber individuais
-add prints para passo a apasso 
-tempo de cada passo
+-- documentação
+so sai do looping do cather se o video for escolihdo e dar certo em pegar o youtube
+ollama necessario - ok
+resquests 
+versões de programa, .exe com interface, terminal, etc - 
 trancrevere demora muito dependo do model
-melhoarar o prompt ou fazer mais de um camada 
+trancrever suga muita energia e memoria
+oque cada função faz
+oque cada blibioteca faz
+avisar do subprocess
+win e unix
+-- melhorias
+windowns n linux
+dar opção de usar resumos antigos, como resumos aprofundados ou algo do tipo
+versões de programa, .exe com interface, terminal, etc - 
+tratamento
+nao so resumir videos resumir audios
+algum diferencial para so nao usar a ia - chatgpt < meu codigo
+converter para wav .16khz para mais nitidez
+converter e transcriber individuais - ok
+tempo de cada passo
+verificar se ollama esta instlado e na porta certa, verificar se a ia escolhida existe na lista 
+fazer fluxo figma
+tipos de prompt, nivel etc - ok
+inico da interface
+-- .exe
+--- dependencias
+empacotar com pyinstaller o binario do ffmpeg e usar o caminho relativo
+empacotar blibliotecas usadas 
 """
 
 import whisper 
+import subprocess
 import torch
 import platform
 import requests
+from requests import ConnectionError
 import json
 from pytubefix import YouTube
 from pytubefix.request import RegexMatchError
@@ -31,14 +52,71 @@ from moviepy import AudioFileClip
 
 # -- principal para organização
 def main():
-    # chamo e guarado o resultado do url_cather que vai ser youtube do audio
-    url_cath = url_catcher()
+    # chama para verificção do ollama
+    verify = verify_ollama()
 
-    # chamo o transcriber_converter para converter em mp3 e trasncrever para txt
-    transcibe_catch = transcriber_converter(url_cath)
+    if verify:
 
-    # chamo para resumir a trancrição do video
-    resume(transcibe_catch)
+        # chamo e guarado o result do url_cather que vai ser youtube do audio
+        url_cath = url_catcher()
+
+        # chamo o converter para converter em mp4 em mp3 
+        converter_catch = converter(url_cath)
+
+        # chamo o trancriber para trasncrever para txt
+        transcriber_catch = transcriber(converter_catch)
+
+        # chamo para resumir a trancrição do video
+        resumo = resume(transcriber_catch)
+
+        # verificando se o usuario quer um resummo mais aprofundado (resumo vire uma apostila)
+        confirm = search_create(resumo)
+
+        # mosrando resumo caso ele nao quer um aprofundado
+        if confirm == '':
+            print(f"mostrando resumo \n resumo: {resumo}")
+
+    else:
+        print("fechando software")
+
+
+
+# -- verificando se o ollama esta na maquina
+def verify_ollama():
+    # verificando com um subproces para ver se ollama e reconhecido (vcomo rodar o terminal enquanto usa o progrtama, tomar cuidado com antivirus etc)
+    try:
+        result = subprocess.run(["ollama", "--version"], capture_output=True, text=True)
+        if result.returncode != 0: # 0 e sucesso
+            print("ollama nao instalado ou esta no path, impossivel de utilizar o software \n clique no botao 'instalar ollama automaticamente(i do lado faldno qoue faz) ou instale no : https://link/ollama/installer'") # futuramente opção de configuarr o path | chamar função do ollama nao instaldo aqui          
+            return False # caso o função de certo isso aqui true
+        else:
+            print("\n ollama instalado, verificando se esta rodando no servidor!")
+
+    except FileNotFoundError:
+        # chamar função do ollama nao instaldo aqui   
+        return False # caso o função de certo isso aqui true
+
+    # verificando se ollma ta no localhost, atraves do request
+    try:
+        response = requests.get("http://localhost:11434")
+        if response.status_code == 200:
+            print("ollama instaldo e rodando localmente, inicializando o app!")
+            return True
+        elif response.status_code == 404:
+            print("ollama nao rodando localmente, aperte o botao para rodar ou escreva no terminal: \n ''bash \n ollama serve \n ''")
+            # chmar função do ollama nao rodando local aqui
+            return False # caso o função de certo isso aqui true
+
+        else:
+            status = response.status_code
+            print(f"ollama rodando localmente, porem servidor retornou: {status}")
+            return False
+        
+
+    except ConnectionError:
+        print("\n ollama não está rodando em http://localhost:11434 ou nao foi inicializado")
+        # chmar função do ollama nao rodando local aqui
+        return False # caso o função de certo isso aqui true
 
 # -- pega a url do video
 def url_catcher():
@@ -68,8 +146,23 @@ def url_catcher():
         except RegexMatchError:
             print("url invalida")
 
+# -- converte o audio para mp3
+def converter(audio_yt):
+     # cria uma caminho para tranformar em mp4
+    audio_yt_path = audio_yt.download(filename='audio.mp4')
+
+    # converter para wav .16khz para mais nitidez
+
+    # converte para mp3
+    mp3_audio_path = 'audio.mp3'
+    audio_converter =  AudioFileClip(audio_yt_path) # varaivel para poder converter e add o path escolhido
+    print("\nConvetendo audio para mp3..")
+    audio_converter.write_audiofile(mp3_audio_path)
+    print("Audio convertido!")
+    return mp3_audio_path
+
 # -- converte e trancreve
-def transcriber_converter(audio_yt):
+def transcriber(mp3_audio_path):
     # escolhendo o medlo da ia whisper
     model_user = input("""
     Digite o modelo do Whisper a ser usado:
@@ -96,18 +189,6 @@ def transcriber_converter(audio_yt):
     print(f"\nCarregando modelo: '{model_user}' no dispositivo: {device_user}({device})...")
     model = whisper.load_model(model_user).to(device)
     print("Modelo carregado com sucesso!\n")
-
-    # cria uma caminho para tranformar em mp4
-    audio_yt_path = audio_yt.download(filename='audio.mp4')
-
-    # converter para wav .16khz para mais nitidez
-
-    # converte para mp3
-    mp3_audio_path = 'audio.mp3'
-    audio_converter =  AudioFileClip(audio_yt_path) # varaivel para poder converter e add o path escolhido
-    print("\nConvetendo audio para mp3..")
-    audio_converter.write_audiofile(mp3_audio_path)
-    print("Audio convertido!")
 
     # trancrevendo o audio
     print("\ntranscrevendo o audio...")
@@ -139,22 +220,43 @@ def resume(audio_txt):
     body = {"model":f"{ia}", "prompt":f"{prompt}", "stream":False}
 
     # enviando requisição
+    print("\nresumindo..")
     response = requests.post(url_api, headers=header, json=body )
 
     data = response.json()
     tempo_em_segundos = data["total_duration"] / 1_000_000_000
-    print(f"R:{data['response']} \n tempo de duração: {tempo_em_segundos}")
-
+    print(f"resumo gerado! \n tempo de duração: {tempo_em_segundos}")
+    return data['response']
     # # a resposta e por varais linhas e o json nao consgeu lidar com esse tipo de stream, enao vamos pegar linha a linhas
     # for line in response.iter_lines():
     #     data = json.loads(line.decode("utf-8")) 
     #     if "response" in data:
     #         print(data["response"], end='', flush=True)
 
-    print("\nresumindo..")
+# -- opçoes de criaçõ com resumo
+def search_create(prompt):
+    btn = input("voce quer usar o resumo ?") # mais pra frente vai ser ua opção avulsa par usar qualqer resumo
+    if btn == "":
+        tipo_prompt_user = input("""
+        Digite o voce quer fazer apartir do resumo:
 
-# -- pesquisa e aprofunda o resumo ou temma do video
-def search_create():
-    print("pesquisando sobre o tema e o resumo, para criar flash cards ou outros resumos mais aprofundados")
+        1 - aprofundar o resumo - vai buscar fontes, completar o assunto e gerar mais conteudo - tempo de resposta lento 
+        2 - gerar flashcards - vai pegar o resumo e apartir dele criar flash cards (txts,txt,readme.md,notion,pdf) # add um if a mais dps - tempo de resposta medio
+        3 - gerar apostila - vai gerar uma apostila buscando o tema, com tutoriais, e questoes (pdf, reade.md, notion) - tempo de resposta lento 
+        4 - transforar em audiobook - pega o resumo escolhido e tranforma em audiobook - tempo de resposta lento
+        5 - 
+
+        """).strip() # tratando de forma facil
+        opcoes = {"1" : "prompt1",
+                  "2" : "prompt2",
+                  "3" : "prompt5",
+                  "4" : "prompt6",
+                  "5" : "prompt7" } 
+        if tipo_prompt_user in opcoes: # se existir a opção
+            prompt = opcoes[tipo_prompt_user]
+    else:
+        btn = input("tem certeza? (mostra resumo)") # messaboz com cancel ok ou nao
+
+        return btn 
 
 main()
