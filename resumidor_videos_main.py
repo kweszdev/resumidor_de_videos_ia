@@ -26,6 +26,8 @@ windowns n linux
 dar opção de usar resumos antigos, como resumos aprofundados ou algo do tipo em txts
 versões de programa, .exe com interface, terminal, etc - 
 tratamento
+repetição
+usar o mesmo modelo
 nao so resumir videos resumir audios
 algum diferencial para so nao usar a ia - chatgpt < meu codigo
 converter para wav .16khz para mais nitidez
@@ -42,7 +44,7 @@ empacotar com pyinstaller o binario do ffmpeg e usar o caminho relativo
 empacotar blibliotecas usadas 
 
 -- commit
-adição de tratamentos, divisao de carregar modelo(verificação) e transcrever
+
 """
 
 import whisper 
@@ -61,32 +63,41 @@ def main():
     # chama para verificção do ollama
     verify = verify_ollama()
 
-    if verify:
+    # repetição para varios resumos
+    while True:
 
-        # chamo e guarado o result do url_cather que vai ser youtube do audio
-        url_cath = url_catcher()
+        if verify:
 
-        # chamo o converter para converter em mp4 em mp3 
-        converter_catch = converter(url_cath)
+            # chamo e guarado o result do url_cather que vai ser youtube do audio
+            url_cath = url_catcher()
 
-        # chamo o trancriber para trasncrever para txt
-        transcriber_catch = transcriber(converter_catch)
+            # chamo o converter para converter em mp4 em mp3 
+            converter_catch = converter(url_cath)
 
-        # chamo para carregar modelo whispér
-        model_catch, model_cath = load_model()
+            # chamo para carregar modelo whispér
+            model_catch = load_model()
 
-        # chamo para resumir a trancrição do video
-        resumo = resume(transcriber_catch, model_catch)
+            # chamo o trancriber para trasncrever para txt
+            transcriber_catch = transcriber(converter_catch, model_catch)
 
-        # verificando se o usuario quer um resummo mais aprofundado (resumo vire uma apostila)
-        confirm = search_create(resumo)
+            # chamo para resumir a trancrição do video
+            resumo = resume(transcriber_catch)
 
-        # mosrando resumo caso ele nao quer um aprofundado
-        if confirm == '':
-            print(f"mostrando resumo \n resumo: {resumo}")
+            # verificando se o usuario quer um resummo mais aprofundado (resumo vire uma apostila)
+            confirm_resumn = search_create(resumo)
 
-    else:
-        print("fechando software")
+            # mosrando resumo caso ele nao quer um aprofundado
+            if confirm_resumn == '':
+                print(f"mostrando resumo \n resumo: {resumo}")
+
+            # pergutando se ele quer continuar a usar o software
+            confirm_continue = input("continuar usando o resumidor?")
+            if confirm_continue != "":
+                break
+
+        else:
+            print("fechando software")
+            break
 
 # -- verificando se o ollama esta na maquina
 def verify_ollama():
@@ -128,8 +139,7 @@ def verify_ollama():
 # -- pega a url do video
 def url_catcher():
     # criando uma variavel para repetição e para verificção da partes eguintes do codigo
-    repeticao_url = True
-    while repeticao_url:
+    while True:
         # pedindo a url do video para o usuario
         url = input("digite a url do video do youtube (Ex: 'https://www.youtube.com/watch?v=dl-ZgxlHUtI&t=4s'): ")
         try:
@@ -175,13 +185,14 @@ def converter(audio_yt):
 def load_model():
     global model_cath
     try:
-        # verifica se ha modelo ja carregado 
-        if model_cath == "1":
-           btn = input(f"modelo {model_user} ja carregado, deseja carregar outro modelo?")
-           if btn == "":    
-            model_cath = 0
+        # # verifica se ha modelo ja carregado 
+        # if model_cath == "1":
+        #    btn = input(f"modelo {model_user} ja carregado, deseja carregar outro modelo?")
+        #    if btn == "":    
+        #     model_cath = 0
+
             # repetição para escolher o modelo 
-            while not model_cath:
+            while True:
                 # escolhendo o medlo da ia whisper
                 model_user = input("""
                 Digite o modelo do Whisper a ser usado:
@@ -210,13 +221,8 @@ def load_model():
                     model = whisper.load_model(model_user).to(device)
                     print("Modelo carregado com sucesso!\n")
 
-                    
-                    return [model, True]
-            else:
-                return [model, True]
-        else:
-            model_cath = 1
-            
+                    return model 
+
     except Exception as error:
         print(f"erro ao carregar modelo, motivo: {error}")
 
@@ -261,6 +267,9 @@ def resume(audio_txt):
     data = response.json()
     tempo_em_segundos = data["total_duration"] / 1_000_000_000
     print(f"resumo gerado! \n tempo de duração: {tempo_em_segundos}")
+
+    # salvar resumo (para usar no search)?
+
     return data['response']
     # # a resposta e por varais linhas e o json nao consgeu lidar com esse tipo de stream, enao vamos pegar linha a linhas
     # for line in response.iter_lines():
